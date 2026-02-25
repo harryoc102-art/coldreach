@@ -60,7 +60,7 @@ async function getPendingProspects(campaignId: string): Promise<Prospect[]> {
         SELECT p.id, p.email, p.name, p.company, p.title, p.linkedin_url
         FROM prospects p
         LEFT JOIN generated_emails e ON e.prospect_id = p.id
-        WHERE p.campaign_id = ? AND p.status = 'pending' AND e.id IS NULL
+        WHERE p.campaign_id = ? AND (p.status = 'pending' OR p.status IS NULL) AND e.id IS NULL
         LIMIT 50
       `,
       args: [campaignId],
