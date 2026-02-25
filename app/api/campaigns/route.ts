@@ -53,8 +53,11 @@ export async function POST(req: NextRequest) {
     }, { status: 201 });
   } catch (error) {
     console.error("Error creating campaign:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : "";
+    console.error("Error details:", { message: errorMessage, stack: errorStack });
     return NextResponse.json(
-      { error: "Failed to create campaign" },
+      { error: "Failed to create campaign", details: errorMessage },
       { status: 500 }
     );
   }
