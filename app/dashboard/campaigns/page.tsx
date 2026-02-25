@@ -19,6 +19,15 @@ interface CampaignWithStats {
 
 async function getCampaigns(userId: string): Promise<CampaignWithStats[]> {
   try {
+    console.log("Fetching campaigns for userId:", userId);
+    
+    // First, let's see all campaigns (for debugging)
+    const allCampaigns = await turso.execute({
+      sql: `SELECT id, user_id, name FROM campaigns`,
+      args: [],
+    });
+    console.log("All campaigns in DB:", allCampaigns.rows);
+    
     const result = await turso.execute({
       sql: `
         SELECT 
@@ -37,6 +46,8 @@ async function getCampaigns(userId: string): Promise<CampaignWithStats[]> {
       `,
       args: [userId],
     });
+    
+    console.log("Campaigns for user:", result.rows);
 
     return result.rows.map((row) => ({
       id: String(row.id),
