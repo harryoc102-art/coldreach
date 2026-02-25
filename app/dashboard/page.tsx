@@ -21,7 +21,7 @@ export default async function DashboardPage() {
             Welcome back, {session.user.name || session.user.email}
           </p>
         </div>
-        <Link href="/campaigns/new">
+        <Link href="/dashboard/campaigns/new">
           <Button>New Campaign</Button>
         </Link>
       </div>
@@ -87,7 +87,7 @@ export default async function DashboardPage() {
           <CardContent>
             <div className="text-center py-8 text-muted-foreground">
               <p>No campaigns yet.</p>
-              <Link href="/campaigns/new" className="text-primary hover:underline mt-2 inline-block">
+              <Link href="/dashboard/campaigns/new" className="text-primary hover:underline mt-2 inline-block">
                 Create your first campaign
               </Link>
             </div>
