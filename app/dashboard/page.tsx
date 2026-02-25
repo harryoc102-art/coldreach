@@ -20,6 +20,7 @@ export default async function DashboardPage() {
           <p className="text-muted-foreground mt-1">
             Welcome back, {session.user.name || session.user.email}
           </p>
+          <p className="text-xs text-muted-foreground mt-1">User ID: {session.user.id}</p>
         </div>
         <Link href="/dashboard/campaigns/new">
           <Button>New Campaign</Button>
