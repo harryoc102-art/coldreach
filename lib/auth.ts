@@ -15,10 +15,13 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account, profile }) {
       try {
+        // Use Google OAuth 'sub' as the canonical user ID
+        const userId = profile?.sub || user.id;
+        
         // Check if user exists in database
         const result = await turso.execute({
           sql: "SELECT id FROM users WHERE id = ?",
-          args: [user.id],
+          args: [userId],
         });
 
         // If user doesn't exist, create them
@@ -26,13 +29,13 @@ export const authOptions: NextAuthOptions = {
           await turso.execute({
             sql: "INSERT INTO users (id, email, name, image) VALUES (?, ?, ?, ?)",
             args: [
-              user.id,
+              userId,
               user.email || null,
               user.name || null,
               user.image || null,
             ],
           });
-          console.log("Created new user in database:", user.id);
+          console.log("Created new user in database:", userId);
         }
         return true;
       } catch (error) {
@@ -47,8 +50,11 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-    async jwt({ token, user }) {
-      if (user) {
+    async jwt({ token, user, account, profile }) {
+      // Use Google OAuth 'sub' as the canonical user ID
+      if (profile?.sub) {
+        token.sub = profile.sub;
+      } else if (user?.id) {
         token.sub = user.id;
       }
       return token;
