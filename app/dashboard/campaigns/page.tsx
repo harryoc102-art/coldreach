@@ -34,35 +34,43 @@ async function getCampaigns(userId: string, userEmail?: string | null): Promise<
       }
     }
     
-    const result = await turso.execute({
-      sql: `
-        SELECT 
-          c.id,
-          c.name,
-          c.status,
-          c.created_at,
-          COUNT(DISTINCT p.id) as prospect_count,
-          COUNT(DISTINCT e.id) as email_count
-        FROM campaigns c
-        LEFT JOIN prospects p ON p.campaign_id = c.id
-        LEFT JOIN generated_emails e ON e.prospect_id = p.id
-        WHERE c.user_id = ?
-        GROUP BY c.id
-        ORDER BY c.created_at DESC
-      `,
+    // Simple query without JOINs first to verify basic access
+    const simpleResult = await turso.execute({
+      sql: "SELECT id, name, status, created_at FROM campaigns WHERE user_id = ? ORDER BY created_at DESC",
       args: [effectiveUserId],
     });
+    console.log("Simple query found:", simpleResult.rows.length, "campaigns");
     
-    console.log("Campaigns found:", result.rows.length);
-
-    return result.rows.map((row) => ({
-      id: String(row.id),
-      name: String(row.name),
-      status: String(row.status),
-      created_at: String(row.created_at),
-      prospect_count: Number(row.prospect_count || 0),
-      email_count: Number(row.email_count || 0),
-    }));
+    // Now get counts separately for each campaign
+    const campaignsWithStats = await Promise.all(
+      simpleResult.rows.map(async (row) => {
+        const campaignId = String(row.id);
+        
+        const prospectResult = await turso.execute({
+          sql: "SELECT COUNT(*) as count FROM prospects WHERE campaign_id = ?",
+          args: [campaignId],
+        });
+        
+        const emailResult = await turso.execute({
+          sql: `SELECT COUNT(*) as count FROM generated_emails e 
+                JOIN prospects p ON e.prospect_id = p.id 
+                WHERE p.campaign_id = ?`,
+          args: [campaignId],
+        });
+        
+        return {
+          id: campaignId,
+          name: String(row.name),
+          status: String(row.status),
+          created_at: String(row.created_at),
+          prospect_count: Number(prospectResult.rows[0]?.count || 0),
+          email_count: Number(emailResult.rows[0]?.count || 0),
+        };
+      })
+    );
+    
+    console.log("Campaigns with stats:", campaignsWithStats.length);
+    return campaignsWithStats;
   } catch (error) {
     console.error("Error fetching campaigns:", error);
     return [];
