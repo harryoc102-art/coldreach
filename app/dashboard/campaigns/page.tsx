@@ -17,16 +17,22 @@ interface CampaignWithStats {
   email_count: number;
 }
 
-async function getCampaigns(userId: string): Promise<CampaignWithStats[]> {
+async function getCampaigns(userId: string, userEmail?: string | null): Promise<CampaignWithStats[]> {
   try {
-    console.log("Fetching campaigns for userId:", userId);
+    console.log("Fetching campaigns for userId:", userId, "email:", userEmail);
     
-    // First, let's see all campaigns (for debugging)
-    const allCampaigns = await turso.execute({
-      sql: `SELECT id, user_id, name FROM campaigns`,
-      args: [],
-    });
-    console.log("All campaigns in DB:", allCampaigns.rows);
+    // Try to find user by email if ID doesn't match
+    let effectiveUserId = userId;
+    if (userEmail) {
+      const userResult = await turso.execute({
+        sql: "SELECT id FROM users WHERE email = ?",
+        args: [userEmail],
+      });
+      if (userResult.rows.length > 0) {
+        effectiveUserId = String(userResult.rows[0].id);
+        console.log("Found user by email, using ID:", effectiveUserId);
+      }
+    }
     
     const result = await turso.execute({
       sql: `
@@ -44,10 +50,10 @@ async function getCampaigns(userId: string): Promise<CampaignWithStats[]> {
         GROUP BY c.id
         ORDER BY c.created_at DESC
       `,
-      args: [userId],
+      args: [effectiveUserId],
     });
     
-    console.log("Campaigns for user:", result.rows);
+    console.log("Campaigns found:", result.rows.length);
 
     return result.rows.map((row) => ({
       id: String(row.id),
@@ -80,7 +86,11 @@ export default async function CampaignsPage() {
     redirect("/login");
   }
 
-  const campaigns = await getCampaigns(session.user.id);
+  console.log("[CAMPAIGNS PAGE] Session user ID:", session.user.id);
+  console.log("[CAMPAIGNS PAGE] Session user email:", session.user.email);
+  
+  const campaigns = await getCampaigns(session.user.id, session.user.email);
+  console.log("[CAMPAIGNS PAGE] Found campaigns:", campaigns.length);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
